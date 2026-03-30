@@ -4,6 +4,11 @@ section .data
     num_arr      db '0123456789ABCDEF'
     symb db '!'
     
+; %d print_sign_dec
+; %u print_unsign_dec
+; %o print_oct
+; %b print_bin
+; %x print_hex
 
 section .bss
     buffer resb 32  ; буфер для копирования строки
@@ -22,51 +27,119 @@ buffer_out:
 
     ret
 
-print:
-    push rax
-    push rcx        ; сохраняем rcx!
-    push rdi
-    push rsi
-    push rdx
-    
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, symb
-    mov rdx, 1
-    syscall
-    
-    pop rdx
-    pop rsi
-    pop rdi
-    pop rcx         ; восстанавливаем rcx
-    pop rax
-    ret
+;_____________________________________
+; split and put sign number in buffer (notation = 10)
+; ENTRY:
+;       par = number
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+print_sign_dec:
+    push rbp                    ; save regs
+    mov  rbp, rsp                ; save it for params
 
-put_num_in_buf:
-    push rbp
-    mov rbp, rsp
-    push rbx
-    push rcx
-    push rdx
-    
-    mov eax, [rbp+16]           ; eax = num
-    mov ebx, [rbp+24]           ; ebx = number format
-
-    cmp ebx, 10
-    jne not_dec
+    mov eax, [rbp+16]           ; number
+    mov ebx, 10
 
     cmp eax, 0
-    jge upper_0
+    jge not_need_minus
 
     movzx ecx, word [buf_size]
     mov byte [buffer + ecx], '-'      ; записать минус
     inc word [buf_size]               ; увеличить смещение
 
     neg eax
-not_dec:
+not_need_minus:
 
-upper_0:
+    call put_num_in_buf
 
+    pop rbp
+
+    ret
+
+;_____________________________________
+; split and put unsign number in buffer (notation = 10)
+; ENTRY:
+;       par = number
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+print_unsign_dec:
+    push rbp                    ; save regs
+    mov  rbp, rsp                ; save it for params
+
+    mov eax, [rbp+16]           ; number //TODO change 16
+    mov ebx, 10
+
+    call put_num_in_buf
+
+    pop rbp
+
+    ret
+
+;_____________________________________
+; split and put number in buffer (notation = 8)
+; ENTRY:
+;       par = number
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+print_oct:
+    push rbp                    ; save regs
+    mov  rbp, rsp                ; save it for params
+
+    mov eax, [rbp+16]           ; number
+    mov ebx, 8
+
+    call put_num_in_buf
+
+    pop rbp
+
+    ret
+
+;_____________________________________
+; split and put number in buffer (notation = 2)
+; ENTRY:
+;       par = number
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+print_bin:
+    push rbp                    ; save regs
+    mov  rbp, rsp                ; save it for params
+
+    mov eax, [rbp+16]           ; number
+    mov ebx, 2
+
+    call put_num_in_buf
+
+    pop rbp
+
+    ret
+
+;_____________________________________
+; split and put number in buffer (notation = 16)
+; ENTRY:
+;       par = number
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+print_hex:
+    push rbp                    ; save regs
+    mov  rbp, rsp                ; save it for params
+
+    mov eax, [rbp+16]           ; number
+    mov ebx, 16
+
+    call put_num_in_buf
+
+    pop rbp
+
+    ret
+
+;_____________________________________
+; split and put number in buffer
+; ENTRY:
+;       eax = number
+;       ebx = notation
+; CHANGE: rax, rcx, rbx, rdx
+;_____________________________________
+put_num_in_buf:
     xor rcx, rcx                ; ecx = 0
 
 start_split:                    ; split num on symbols
@@ -93,25 +166,21 @@ not_clean:
     movzx ebx, word [buf_size]  ; free point in buffer
 start_print:
     pop rax                     ; get symbol
-    mov [buffer + ebx], al     ; put smb in buffer
+    mov [buffer + ebx], al      ; put smb in buffer
 
     inc ebx                     ; update free point
     loop start_print            ; go to new iteration
 
-    mov word [buf_size], bx      ; update [buffer_size]
-
-    pop rdx
-    pop rcx
-    pop rbx
-    pop rbp
+    mov word [buf_size], bx     ; update [buffer_size]
 
     ret
 
 
+
 _start:
-    push qword 16
-    push qword -11
-    call put_num_in_buf
+    push qword 10
+    call print_hex
+
     add rsp, 8
     call buffer_out
 
